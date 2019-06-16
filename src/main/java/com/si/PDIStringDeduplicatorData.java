@@ -25,6 +25,21 @@ import org.pentaho.di.trans.step.StepDataInterface;
 public class PDIStringDeduplicatorData extends BaseStepData implements StepDataInterface {
   // Add any execution-specific data here
 
+  public String dedupForwards(String inString){
+    //TODO deduplicate forwards
+    String outString = inString;
+
+    return outString;
+  }
+
+
+  public String dedupBackwards(String inString){
+    //TODO deduplicate backwards
+    String outString = inString;
+
+    return outString;
+  }
+
   /**
    * 
    */

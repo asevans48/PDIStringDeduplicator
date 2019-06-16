@@ -1,5 +1,11 @@
 
-# Project Title Here
+# PDI string Deduplication
+
+String deduplication on a sliding window in Pentaho. Set the max number of words and min number of words to deduplicate on. The program
+will slide on a loop to the max number of words. If no word limit is set, only 1 word is used. Sentences can be split through a different
+tool available on my github account. Might add some kind of phrase thing at some point.
+
+This tool is intended for data that comes from OCR, PDF, scraped sources; anything that is truly just gross by default.
 
 #### Pre-requisites for building the project:
 * Maven, version 3+

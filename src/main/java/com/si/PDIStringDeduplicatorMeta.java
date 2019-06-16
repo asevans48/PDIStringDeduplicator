@@ -18,16 +18,19 @@
  */
 package com.si;
 
+import org.pentaho.di.core.Const;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
+import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -53,14 +56,70 @@ import java.util.List;
 @Step( id = "PDIStringDeduplicator", image = "PDIStringDeduplicator.svg", name = "String Dedup",
     description = "A string deduplication method", categoryDescription = "Transform" )
 public class PDIStringDeduplicatorMeta extends BaseStepMeta implements StepMetaInterface {
-  
+
+  private String inField = "";
+  private String outField = "";
+  private Long maxWords = 1L;
+  private Long minWords = 1L;
+  private Boolean dedupBackwards = false;
+
   private static Class<?> PKG = PDIStringDeduplicator.class; // for i18n purposes, needed by Translator2!!   $NON-NLS-1$
 
   public PDIStringDeduplicatorMeta() {
     super(); // allocate BaseStepMeta
   }
 
-  public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
+  public String getInField() {
+    return inField;
+  }
+
+  public Boolean getDedupBackwards() {
+    return dedupBackwards;
+  }
+
+  public void setDedupBackwards(Boolean dedupBackwards) {
+    this.dedupBackwards = dedupBackwards;
+  }
+
+  public void setInField(String inField) {
+    this.inField = inField;
+  }
+
+  public String getOutField() {
+    return outField;
+  }
+
+  public void setOutField(String outField) {
+    this.outField = outField;
+  }
+
+  public Long getMaxWords() {
+    return maxWords;
+  }
+
+  public void setMaxWords(Long maxWords) {
+    this.maxWords = maxWords;
+  }
+
+  public Long getMinWords() {
+    return minWords;
+  }
+
+  public void setMinWords(Long minWords) {
+    this.minWords = minWords;
+  }
+
+  public String getXML() throws KettleValueException {
+    StringBuilder xml = new StringBuilder();
+    xml.append( XMLHandler.addTagValue( "inField", inField ) );
+    xml.append(XMLHandler.addTagValue("outField", outField));
+    xml.append(XMLHandler.addTagValue("minWords", minWords));
+    xml.append(XMLHandler.addTagValue("maxWords", maxWords));
+    xml.append(XMLHandler.addTagValue("dedupBackwords", dedupBackwards));
+    return xml.toString();
+  }
+
+  public void loadXML(Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
     readData( stepnode );
   }
 
@@ -69,23 +128,56 @@ public class PDIStringDeduplicatorMeta extends BaseStepMeta implements StepMetaI
     return retval;
   }
   
-  private void readData( Node stepnode ) {
-    // Parse the XML (starting with the given stepnode) to extract the step metadata (into member variables, for example)
+  private void readData( Node stepnode ) throws KettleXMLException{
+    try {
+      setInField(Const.NVL(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "inField")), ""));
+      setOutField(Const.NVL(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "outField")), ""));
+      setMaxWords(Long.valueOf(Const.NVL(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "maxWords")), "1")));
+      setMinWords(Long.valueOf(Const.NVL(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "minWords")), "1")));
+      setDedupBackwards(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "dedupBackwords")).toUpperCase().equals("Y"));
+    } catch ( Exception e ) {
+      throw new KettleXMLException( "Demo plugin unable to read step info from XML node", e );
+    }
   }
 
   public void setDefault() {
+    this.inField = "";
+    this.outField = "";
+    this.maxWords = 1L;
+    this.minWords = 1L;
   }
 
   public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases ) throws KettleException {
+    try {
+      inField  = rep.getStepAttributeString(id_step, "inField" );
+      outField = rep.getStepAttributeString(id_step, "outField");
+      minWords = rep.getStepAttributeInteger(id_step, "minWords");
+      maxWords = rep.getStepAttributeInteger(id_step, "maxWords");
+      dedupBackwards = rep.getStepAttributeBoolean(id_step, "dedupBackwords");
+    } catch ( Exception e ) {
+      throw new KettleException( "Unable to load step from repository", e );
+    }
   }
   
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step )
     throws KettleException {
+    try {
+      rep.saveStepAttribute( id_transformation, id_step, "inField", inField);
+      rep.saveStepAttribute( id_transformation, id_step, "outField", outField);
+      rep.saveStepAttribute( id_transformation, id_step, "maxWords", maxWords);
+      rep.saveStepAttribute( id_transformation, id_step, "minWords", minWords);
+      rep.saveStepAttribute( id_transformation, id_step, "dedupBackwards", dedupBackwards);
+    } catch ( Exception e ) {
+      throw new KettleException( "Unable to save step into repository: " + id_step, e );
+    }
   }
   
   public void getFields( RowMetaInterface rowMeta, String origin, RowMetaInterface[] info, StepMeta nextStep, 
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
-    // Default: nothing changes to rowMeta
+    ValueMetaInterface v0 = new ValueMetaString(outField);
+    v0.setTrimType(ValueMetaInterface.TRIM_TYPE_BOTH);
+    v0.setOrigin(origin);
+    rowMeta.addValueMeta(v0);
   }
   
   public void check( List<CheckResultInterface> remarks, TransMeta transMeta, 
