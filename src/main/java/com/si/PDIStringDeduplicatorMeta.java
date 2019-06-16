@@ -73,7 +73,7 @@ public class PDIStringDeduplicatorMeta extends BaseStepMeta implements StepMetaI
     return inField;
   }
 
-  public Boolean getDedupBackwards() {
+  public Boolean isDedupBackwards() {
     return dedupBackwards;
   }
 
